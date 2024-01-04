@@ -1,0 +1,38 @@
+import aiohttp
+import asyncio
+import sys
+from datetime import datetime, timedelta
+
+async def fetch_currency(date):
+    url = f'https://api.privatbank.ua/p24api/exchange_rates?date={date}'
+    
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as response:
+            data = await response.json()
+            return {date: data}
+
+async def get_currency_for_last_days(days):
+    today = datetime.now()
+    dates = [today - timedelta(days=i) for i in range(days)]
+
+    tasks = [fetch_currency(date.strftime('%d.%m.%Y')) for date in dates]
+
+    results = await asyncio.gather(*tasks)
+    return results
+
+def main():
+    try:
+        days = int(sys.argv[1])
+        if days > 10:
+            print("Error: The number of days should not exceed 10.")
+            return
+    except (IndexError, ValueError):
+        print("Error: Please provide a valid number of days.")
+        return
+
+    loop = asyncio.get_event_loop()
+    result = loop.run_until_complete(get_currency_for_last_days(days))
+    print(result)
+
+if __name__ == "__main__":
+    main()
